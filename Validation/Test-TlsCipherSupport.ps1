@@ -63,6 +63,10 @@ param(
     [string]$MinTlsVersion = 'Tls12',
 
     [Parameter()]
+    [Alias('SniHost', 'Sni')]
+    [string]$ServerName,
+
+    [Parameter()]
     [switch]$AsJson
 )
 
@@ -122,6 +126,7 @@ begin {
             [int]$TargetPort
         )
 
+        $sniHostname = if (-not [string]::IsNullOrWhiteSpace($ServerName)) { $ServerName } else { $TargetHost }
         $protocolResults = [ordered]@{}
         $findings = New-Object System.Collections.Generic.List[string]
         $capturedCert = $null
@@ -155,25 +160,33 @@ begin {
                     $sslStream.WriteTimeout = $TimeoutMs
 
                     try {
-                        # Authenticate as client using specific protocol
-                        $sslStream.AuthenticateAsClient($TargetHost, $null, $enumVal, $false)
-                        $supported = $true
+                        # Authenticate as client using specific protocol and SNI hostname
+                        # Passing explicit SNI hostname ensures CDN / Cloud endpoints (Cloudflare, AWS ALB)
+                        # return the correct certificate and complete handshakes instead of throwing SSL errors.
+                        $authTask = $sslStream.AuthenticateAsClientAsync($sniHostname, $null, $enumVal, $false)
+                        if ($authTask.Wait($TimeoutMs) -and -not $authTask.IsFaulted) {
+                            $supported = $true
 
-                        if (-not $capturedCert -and $sslStream.RemoteCertificate) {
-                            $capturedCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 $sslStream.RemoteCertificate
-                            $negotiatedDetails = [PSCustomObject]@{
-                                Protocol            = $sslStream.SslProtocol.ToString()
-                                CipherAlgorithm     = $sslStream.CipherAlgorithm.ToString()
-                                CipherStrength      = $sslStream.CipherStrength
-                                HashAlgorithm       = $sslStream.HashAlgorithm.ToString()
-                                HashStrength        = $sslStream.HashStrength
-                                KeyExchangeAlgorithm= $sslStream.KeyExchangeAlgorithm.ToString()
-                                KeyExchangeStrength = $sslStream.KeyExchangeStrength
+                            if (-not $capturedCert -and $sslStream.RemoteCertificate) {
+                                $capturedCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 $sslStream.RemoteCertificate
+                                $negotiatedDetails = [PSCustomObject]@{
+                                    Protocol            = $sslStream.SslProtocol.ToString()
+                                    CipherAlgorithm     = $sslStream.CipherAlgorithm.ToString()
+                                    CipherStrength      = $sslStream.CipherStrength
+                                    HashAlgorithm       = $sslStream.HashAlgorithm.ToString()
+                                    HashStrength        = $sslStream.HashStrength
+                                    KeyExchangeAlgorithm= $sslStream.KeyExchangeAlgorithm.ToString()
+                                    KeyExchangeStrength = $sslStream.KeyExchangeStrength
+                                }
                             }
+                        } else {
+                            $supported = $false
                         }
                     } catch {
                         $supported = $false
                     }
+                } else {
+                    $findings.Add("TCP connection to $TargetHost`:$TargetPort timed out after $TimeoutMs ms.")
                 }
             } catch {
                 $supported = $false
@@ -303,11 +316,20 @@ begin {
 
 process {
     $scanResults = New-Object System.Collections.Generic.List[PSCustomObject]
+    $allCompliant = $true
 
     foreach ($server in $ComputerName) {
         $res = Evaluate-Endpoint -TargetHost $server -TargetPort $Port
+        if (-not $res.IsCompliant) {
+            $allCompliant = $false
+            foreach ($f in $res.Findings) {
+                Write-Warning "TLS Compliance Finding [$($res.Host):$($res.Port)]: $f"
+            }
+        }
         $scanResults.Add($res)
     }
+
+    $global:LASTEXITCODE = if ($allCompliant) { 0 } else { 1 }
 
     if ($AsJson) {
         $scanResults | ConvertTo-Json -Depth 6

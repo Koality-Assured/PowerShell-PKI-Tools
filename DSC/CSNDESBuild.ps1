@@ -167,17 +167,33 @@ Configuration CSNDESBuild {
             }
         }
 
-        # Install NDES and Web Server Role Services
-        WindowsFeatureSet InstallNDESFeatures {
+        # 1. Install IIS and ASP.NET Core / Request Filtering Prerequisites
+        # Crucial: Adcs-Device-Enrollment requires IIS, Web-Asp-Net45, and Web-Filtering.
+        # Installing prerequisites in a dedicated stage prevents 0x800f0922 DISM dependency failures.
+        WindowsFeatureSet InstallIISPrerequisites {
             Name                 = @(
-                'Adcs-Device-Enrollment',
                 'Web-Server',
-                'Web-Asp-Net45',
                 'Web-Filtering',
-                'Web-Mgmt-Console'
+                'Web-Asp-Net45',
+                'Web-Net-Ext45',
+                'Web-ISAPI-Ext',
+                'Web-ISAPI-Filter',
+                'Web-Metabase',
+                'Web-Mgmt-Console',
+                'NET-Framework-45-ASPNET'
             )
             Ensure               = 'Present'
             IncludeAllSubFeature = $true
+        }
+
+        # 2. Install Active Directory Certificate Services NDES Role
+        WindowsFeatureSet InstallNDESFeatures {
+            Name                 = @(
+                'Adcs-Device-Enrollment'
+            )
+            Ensure               = 'Present'
+            IncludeAllSubFeature = $true
+            DependsOn            = '[WindowsFeatureSet]InstallIISPrerequisites'
         }
 
         # Assign NDES Service Management Group to IIS_IUSRS for AppPool execution

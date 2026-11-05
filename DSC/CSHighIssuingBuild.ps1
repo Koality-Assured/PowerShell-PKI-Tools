@@ -115,6 +115,10 @@ param(
     [string]$ValidityPeriod = 'Years',
 
     [Parameter()]
+    [ValidateRange(1, 50)]
+    [int]$ParentCaValidityYears = 20,
+
+    [Parameter()]
     [ValidateRange(1, 90)]
     [int]$CRLPeriodUnits = 14,
 
@@ -175,6 +179,13 @@ param(
 # Convert domain name to Distinguished Name (e.g., corp.example.com -> DC=corp,DC=example,DC=com)
 $domainParts = $DomainName.Split('.')
 $DomainDN = ($domainParts | ForEach-Object { "DC=$_" }) -join ','
+
+# Hierarchy Validity Pre-flight Check:
+# Subordinate CA validity must be strictly less than Parent Root CA validity (NIST SP 800-57 Part 1 Rev 5).
+$requestedValidityYears = if ($ValidityPeriod -eq 'Years') { $ValidityPeriodUnits } else { [math]::Ceiling($ValidityPeriodUnits / 12) }
+if ($requestedValidityYears -ge $ParentCaValidityYears) {
+    throw "Conflicting CA Validity Periods: Subordinate Issuing CA validity ($requestedValidityYears years) must be strictly less than Parent Root CA validity ($ParentCaValidityYears years). Best practice recommends Root CA validity >= 2x Subordinate CA validity."
+}
 
 # CAPolicy.inf generation for Subordinate CA
 $capolicyBuilder = New-Object -TypeName System.Text.StringBuilder

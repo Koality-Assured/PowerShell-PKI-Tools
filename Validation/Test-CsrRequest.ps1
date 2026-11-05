@@ -213,10 +213,18 @@ begin {
 
                 # Extensions (SAN, Key Usage, EKU)
                 if ($pkcs10.X509Extensions) {
+                    $seenExtensionOids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                     foreach ($ext in $pkcs10.X509Extensions) {
                         $extOid = $ext.ObjectId.Value
                         $extName = $ext.ObjectId.FriendlyName
                         $extensionList.Add("$extName ($extOid)")
+
+                        # Check for duplicate extensions (RFC 5280 Section 4.2 / Extension smuggling vulnerability)
+                        if ($seenExtensionOids.Contains($extOid)) {
+                            $violations.Add("Duplicate X.509 extension detected for OID '$extOid' ($extName): RFC 5280 Section 4.2 prohibits duplicate extensions (extension smuggling risk).")
+                        } else {
+                            [void]$seenExtensionOids.Add($extOid)
+                        }
 
                         # OID 2.5.29.17: Subject Alternative Name
                         if ($extOid -eq '2.5.29.17') {
@@ -225,14 +233,29 @@ begin {
                                 $altNames.InitializeDecode(1, $ext.RawData(1))
                                 foreach ($an in $altNames.AlternativeNames) {
                                     switch ($an.Type) {
-                                        3 { $sanList.Add("DNS: $($an.strValue)") }
+                                        3 {
+                                            $dnsVal = $an.strValue
+                                            if ([string]::IsNullOrWhiteSpace($dnsVal) -or $dnsVal -match "[\x00-\x1F\x7F]") {
+                                                $violations.Add("Malformed DNS Subject Alternative Name: contains invalid characters, control bytes, or is empty.")
+                                            } else {
+                                                $sanList.Add("DNS: $dnsVal")
+                                            }
+                                        }
                                         2 { $sanList.Add("RFC822: $($an.strValue)") }
                                         7 { $sanList.Add("URI: $($an.strValue)") }
                                         8 {
-                                            $rawBase64 = $an.RawData(1)
-                                            $ipBytes = [Convert]::FromBase64String($rawBase64)
-                                            $ip = [System.Net.IPAddress]::new($ipBytes)
-                                            $sanList.Add("IP: $($ip.ToString())")
+                                            try {
+                                                $rawBase64 = $an.RawData(1)
+                                                $ipBytes = [Convert]::FromBase64String($rawBase64)
+                                                if ($ipBytes.Length -notin @(4, 16)) {
+                                                    $violations.Add("Malformed IP Subject Alternative Name: byte length $($ipBytes.Length) is invalid (must be 4 bytes for IPv4 or 16 bytes for IPv6).")
+                                                } else {
+                                                    $ip = [System.Net.IPAddress]::new($ipBytes)
+                                                    $sanList.Add("IP: $($ip.ToString())")
+                                                }
+                                            } catch {
+                                                $violations.Add("Malformed IP Subject Alternative Name: ASN.1 encoding error: $($_.Exception.Message)")
+                                            }
                                         }
                                         default {
                                             if (-not [string]::IsNullOrWhiteSpace($an.strValue)) {
@@ -242,14 +265,19 @@ begin {
                                     }
                                 }
                             } catch {
+                                $warnings.Add("Failed to parse structured Subject Alternative Name ASN.1 structure: $($_.Exception.Message)")
                                 # Raw parsing fallback for SAN strings
                                 if ($ext.RawData) {
-                                    $rawStr = [System.Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($ext.RawData(0x1)))
-                                    $matches = [regex]::Matches($rawStr, '[a-zA-Z0-9_\-\.]+\.[a-zA-Z]{2,}')
-                                    foreach ($m in $matches) {
-                                        if (-not $sanList.Contains("DNS: $($m.Value)")) {
-                                            $sanList.Add("DNS: $($m.Value)")
+                                    try {
+                                        $rawStr = [System.Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($ext.RawData(0x1)))
+                                        $matches = [regex]::Matches($rawStr, '[a-zA-Z0-9_\-\.]+\.[a-zA-Z]{2,}')
+                                        foreach ($m in $matches) {
+                                            if (-not $sanList.Contains("DNS: $($m.Value)")) {
+                                                $sanList.Add("DNS: $($m.Value)")
+                                            }
                                         }
+                                    } catch {
+                                        $violations.Add("Malformed ASN.1 payload in Subject Alternative Name extension.")
                                     }
                                 }
                             }
@@ -417,6 +445,18 @@ process {
             }
         }
     }
+
+    $hasViolations = $false
+    foreach ($r in $results) {
+        if (-not $r.IsValid) {
+            $hasViolations = $true
+            foreach ($v in $r.Violations) {
+                Write-Warning "CSR Validation Violation [$($r.Source)]: $v"
+            }
+        }
+    }
+
+    $global:LASTEXITCODE = if ($hasViolations) { 1 } else { 0 }
 
     if ($AsJson) {
         $results | ConvertTo-Json -Depth 6
