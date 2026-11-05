@@ -1,0 +1,51 @@
+# PowerShell and DSC compiled artifacts
+*.mof
+*.mfl
+*.meta.mof
+DSC/CSRootBuild/
+DSC/CSHighIssuingBuild/
+DSC/CSMedIssuingBuild/
+DSC/CSWebDistBuild/
+DSC/CSNDESBuild/
+C:\DSC\
+
+# Private Keys and Live Secrets (Strictly Banned)
+*.pfx
+*.p12
+*.key
+*.pem.key
+*.pkcs12
+*.private
+id_rsa
+id_ecdsa
+id_ed25519
+
+# Certificate logs and operational databases
+*.edb
+*.log
+*.chk
+CertLog/
+
+# Python Cache & Testing
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Pester and Test Outputs
+TestResults/
+TestResult.xml
+
+# IDE and Editor Directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System Files
+Thumbs.db
+desktop.ini
+.DS_Store
