@@ -1,13 +1,21 @@
-# PowerShell PKI Tools: Enterprise PKI as Code
+<div align="center">
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B%20%7C%207%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://www.python.org/)
-[![Security Standards](https://img.shields.io/badge/Security-NIST%20SP%20800--57-success.svg)](SECURITY.md)
-[![Tests](https://img.shields.io/badge/Tests-42%20Pester%20%2B%205%20Python%20Passing-brightgreen.svg)](tests/)
-[![Audit Status](https://img.shields.io/badge/Audit-Zero--Leak%20Verified-blueviolet.svg)](adversarial_review.py)
+![POWERSHELL PKI TOOLS Banner](assets/PowerShell-PKI-Tools-banner.svg)
 
-**PowerShell PKI Tools** is a modernized, enterprise-grade, declarative **Public Key Infrastructure as Code (PKI as Code)** framework for Microsoft Active Directory Certificate Services (AD CS). It automates the provisioning, security hardening, Active Directory container delegation, and lifecycle validation of multi-tier enterprise PKI hierarchies.
+# Powershell Pki Tools
+
+<p align="center">
+  <img src="assets/PowerShell-PKI-Tools-logo.svg" alt="POWERSHELL PKI TOOLS Logo" width="128" height="128" />
+</p>
+
+**Declarative Multi-Tier ADCS PKI as Code, NDES with gMSA, CSR Validation & Trust Distribution**
+
+[![CI](https://github.com/Koality-Assured/PowerShell-PKI-Tools/actions/workflows/ci.yml/badge.svg)](https://github.com/Koality-Assured/PowerShell-PKI-Tools/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Domain: pki--tools](https://img.shields.io/badge/domain-pki--tools-blueviolet.svg)](#)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+
+</div>
 
 ---
 
