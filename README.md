@@ -1,18 +1,19 @@
 <div align="center">
 
-![POWERSHELL PKI TOOLS Banner](assets/PowerShell-PKI-Tools-banner.svg)
+![PowerShell PKI Tools Banner](assets/PowerShell-PKI-Tools-banner.svg)
 
-# Powershell Pki Tools
+# PowerShell PKI Tools
 
 <p align="center">
-  <img src="assets/PowerShell-PKI-Tools-logo.svg" alt="POWERSHELL PKI TOOLS Logo" width="128" height="128" />
+  <img src="assets/PowerShell-PKI-Tools-logo.svg" alt="PowerShell PKI Tools Logo" width="128" height="128" />
 </p>
 
 **Declarative Multi-Tier ADCS PKI as Code, NDES with gMSA, CSR Validation & Trust Distribution**
 
 [![CI](https://github.com/Koality-Assured/PowerShell-PKI-Tools/actions/workflows/ci.yml/badge.svg)](https://github.com/Koality-Assured/PowerShell-PKI-Tools/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Domain: pki--tools](https://img.shields.io/badge/domain-pki--tools-blueviolet.svg)](#)
+[![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE.svg)](https://github.com/PowerShell/PowerShell)
+[![Domain: Powershell-Pki-Tools](https://img.shields.io/badge/domain-PowerShell-PKI-Tools-blueviolet.svg)]()
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
 </div>
